@@ -2,6 +2,8 @@
 
 A smart AI-powered tool that analyzes your GitHub repositories and tells you **YES** or **NO** - can this be deployed to production? Get clear answers, identify deployment blockers, and receive step-by-step setup instructions.
 
+**✨ Now supports both public and private repositories!**
+
 ## ✨ What You Get
 
 - **Clear YES/NO Answer**: No complex scoring - just a straightforward answer
@@ -9,6 +11,20 @@ A smart AI-powered tool that analyzes your GitHub repositories and tells you **Y
 - **Smart Environment Setup**: Handles your environment variables intelligently
 - **Personalized Instructions**: Get exact commands and setup steps for your project
 - **Real-time Analysis**: Watch the AI analyze your repository live
+- **🔒 Private Repository Support**: Analyze your private repositories securely with GitHub token
+
+## 🔐 Repository Access Options
+
+### Option 1: Public Repositories
+- Simply paste any GitHub public repository URL
+- No authentication required
+- Perfect for open-source projects and public repositories
+
+### Option 2: Private Repositories
+- Connect with your GitHub Personal Access Token
+- Browse and select from your private repositories
+- Secure token handling - never stored permanently
+- Same analysis power for your private code
 
 ## 🔧 Environment Variables Setup
 
@@ -33,10 +49,19 @@ The analyzer will use your environment variables to:
 ## 🖥️ Web Interface
 
 ### Simple 4-Step Process:
-1. **Enter GitHub URL** - Paste your repository URL
-2. **Setup Environment Variables** - Choose to paste your `.env` file or fill the form
-3. **Answer Questions** (if needed) - Max 3 essential questions
+
+#### For Public Repositories:
+1. **Select "Public Repository"** - Choose the public repo tab
+2. **Enter GitHub URL** - Paste your repository URL
+3. **Setup Environment Variables** - Choose to paste your `.env` file or fill the form
 4. **Get Your Answer** - Clear YES/NO with deployment instructions
+
+#### For Private Repositories:
+1. **Select "Private Repository"** - Choose the private repo tab
+2. **Connect GitHub Account** - Enter your Personal Access Token
+3. **Select Repository** - Browse and choose from your repositories
+4. **Setup Environment Variables** - Configure your environment variables
+5. **Get Your Answer** - Clear YES/NO with deployment instructions
 
 ### Features:
 - 🎨 **Modern UI** - Clean, responsive design that works on all devices
@@ -44,6 +69,25 @@ The analyzer will use your environment variables to:
 - 💬 **Smart Questions** - Only asks what's absolutely necessary
 - 📋 **Live Preview** - See your `.env` file content as you type
 - 🔄 **Easy Reset** - Start over with one click
+- 🔒 **Secure Authentication** - GitHub tokens handled securely
+- 🔍 **Repository Search** - Find your repositories quickly
+- 📊 **Repository Info** - See language, stars, and last updated info
+
+## 🔑 GitHub Token Setup
+
+### Creating a Personal Access Token:
+1. Go to [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens/new?scopes=repo&description=Deployment%20Analyzer)
+2. Click "Generate new token (classic)"
+3. Give it a descriptive name like "Deployment Analyzer"
+4. Select the **`repo`** scope (this gives access to your private repositories)
+5. Click "Generate token"
+6. Copy the token immediately (you won't see it again!)
+
+### Token Security:
+- ✅ **Secure**: Your token is only used to fetch repository information
+- ✅ **Temporary**: Never stored permanently, only kept in memory during analysis
+- ✅ **Limited Scope**: Only requires `repo` scope for repository access
+- ✅ **Revocable**: You can revoke the token anytime from GitHub settings
 
 ## 🚀 Quick Start
 
@@ -158,6 +202,7 @@ python analyze_repo.py https://github.com/user/repo
 - **Security Scanning**: Identifies potential security issues
 - **Configuration Validation**: Ensures proper environment setup
 - **Deployment Readiness**: Comprehensive production readiness check
+- **Private Repository Support**: Secure access to your private code
 
 ### User Experience:
 - **Minimal Questions**: Maximum 3 questions, only when essential
@@ -165,6 +210,13 @@ python analyze_repo.py https://github.com/user/repo
 - **Actionable Insights**: Specific steps to fix issues
 - **Environment Integration**: Uses your actual environment variables
 - **Live Preview**: See your `.env` file content in real-time
+- **GitHub Integration**: Seamless private repository access
+
+### Security:
+- **Token Security**: GitHub tokens handled securely and temporarily
+- **No Permanent Storage**: Tokens never saved to disk
+- **Limited Scope**: Only requires repository access permissions
+- **Secure Cloning**: Private repositories cloned with authentication
 
 ## 🛠️ Technical Stack
 
@@ -172,6 +224,16 @@ python analyze_repo.py https://github.com/user/repo
 - **Frontend**: HTML5, Tailwind CSS, Vanilla JavaScript
 - **AI**: OpenAI GPT-4 for intelligent analysis
 - **Real-time**: WebSocket communication for live updates
+- **GitHub Integration**: GitHub API v3 for repository access
+- **Authentication**: Personal Access Token authentication
+
+## 🔒 Privacy & Security
+
+- **GitHub tokens are never stored permanently**
+- **Repository data is processed in memory only**
+- **Temporary clones are automatically cleaned up**
+- **No repository content is saved to disk**
+- **All analysis happens locally on your server**
 
 ## 🤝 Contributing
 

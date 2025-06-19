@@ -13,6 +13,11 @@ class DeploymentAnalyzer {
         this.questions = [];
         this.userEnvVars = {};
         this.customEnvCounter = 0;
+        this.githubToken = null;
+        this.githubUser = null;
+        this.repositories = [];
+        this.selectedRepo = null;
+        this.currentTab = 'public';
         
         this.init();
     }
@@ -51,60 +56,146 @@ class DeploymentAnalyzer {
     }
     
     attachEventListeners() {
+        // Tab switching
+        const tabPublic = document.getElementById('tab-public');
+        if (tabPublic) {
+            tabPublic.addEventListener('click', () => {
+                this.switchTab('public');
+            });
+        }
+
+        const tabPrivate = document.getElementById('tab-private');
+        if (tabPrivate) {
+            tabPrivate.addEventListener('click', () => {
+                this.switchTab('private');
+            });
+        }
+
         // Check button - now shows env vars section
-        document.getElementById('analyze-btn').addEventListener('click', () => {
-            this.showEnvVarsSection();
-        });
-        
-        // Enter key on URL input
-        document.getElementById('github-url').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
+        const analyzeBtn = document.getElementById('analyze-btn');
+        if (analyzeBtn) {
+            analyzeBtn.addEventListener('click', () => {
                 this.showEnvVarsSection();
-            }
-        });
-        
+            });
+        }
+
+        // Enter key on URL input
+        const githubUrl = document.getElementById('github-url');
+        if (githubUrl) {
+            githubUrl.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.showEnvVarsSection();
+                }
+            });
+        }
+
         // Example URL buttons
         document.querySelectorAll('.example-url').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const url = e.target.getAttribute('data-url');
-                document.getElementById('github-url').value = url;
+                const urlInput = document.getElementById('github-url');
+                if (urlInput) {
+                    urlInput.value = url;
+                }
             });
         });
-        
+
+        // GitHub Authentication
+        const connectGithubBtn = document.getElementById('connect-github-btn');
+        if (connectGithubBtn) {
+            connectGithubBtn.addEventListener('click', () => {
+                this.connectGitHub();
+            });
+        }
+
+        const disconnectGithub = document.getElementById('disconnect-github');
+        if (disconnectGithub) {
+            disconnectGithub.addEventListener('click', () => {
+                this.disconnectGitHub();
+            });
+        }
+
+        // GitHub token input
+        const githubToken = document.getElementById('github-token');
+        if (githubToken) {
+            githubToken.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.connectGitHub();
+                }
+            });
+        }
+
+        // Repository search
+        const repoSearch = document.getElementById('repo-search');
+        if (repoSearch) {
+            repoSearch.addEventListener('input', (e) => {
+                this.filterRepositories(e.target.value);
+            });
+        }
+
+        // Private repository analysis
+        const analyzePrivateBtn = document.getElementById('analyze-private-btn');
+        if (analyzePrivateBtn) {
+            analyzePrivateBtn.addEventListener('click', () => {
+                this.analyzePrivateRepo();
+            });
+        }
+
         // Environment variables section
-        document.getElementById('add-env-var').addEventListener('click', () => {
-            this.addCustomEnvVar();
-        });
-        
-        document.getElementById('skip-env-vars').addEventListener('click', () => {
-            this.startAnalysis();
-        });
-        
-        document.getElementById('submit-env-vars').addEventListener('click', () => {
-            this.collectEnvVarsAndAnalyze();
-        });
-        
+        const addEnvVar = document.getElementById('add-env-var');
+        if (addEnvVar) {
+            addEnvVar.addEventListener('click', () => {
+                this.addCustomEnvVar();
+            });
+        }
+
+        const skipEnvVars = document.getElementById('skip-env-vars');
+        if (skipEnvVars) {
+            skipEnvVars.addEventListener('click', () => {
+                this.startAnalysis();
+            });
+        }
+
+        const submitEnvVars = document.getElementById('submit-env-vars');
+        if (submitEnvVars) {
+            submitEnvVars.addEventListener('click', () => {
+                this.collectEnvVarsAndAnalyze();
+            });
+        }
+
         // Full .env file content handling
-        document.getElementById('full-env-content').addEventListener('input', () => {
-            this.handleFullEnvInput();
-        });
-        
-        document.getElementById('clear-env-content').addEventListener('click', () => {
-            this.clearAllEnvInputs();
-        });
-        
+        const fullEnvContent = document.getElementById('full-env-content');
+        if (fullEnvContent) {
+            fullEnvContent.addEventListener('input', () => {
+                this.handleFullEnvInput();
+            });
+        }
+
+        const clearEnvContent = document.getElementById('clear-env-content');
+        if (clearEnvContent) {
+            clearEnvContent.addEventListener('click', () => {
+                this.clearAllEnvInputs();
+            });
+        }
+
         // Environment variables input listeners
         this.attachEnvVarListeners();
-        
+
         // Submit responses button
-        document.getElementById('submit-responses').addEventListener('click', () => {
-            this.submitResponses();
-        });
-        
+        const submitResponses = document.getElementById('submit-responses');
+        if (submitResponses) {
+            submitResponses.addEventListener('click', () => {
+                this.submitResponses();
+            });
+        }
+
         // New analysis button
-        document.getElementById('new-analysis').addEventListener('click', () => {
-            this.resetAnalysis();
-        });
+        const newAnalysis = document.getElementById('new-analysis');
+        if (newAnalysis) {
+            newAnalysis.addEventListener('click', () => {
+                this.resetAnalysis();
+            });
+        }
     }
     
     attachEnvVarListeners() {
@@ -148,29 +239,345 @@ class DeploymentAnalyzer {
     
     updateConnectionStatus(connected) {
         const statusElement = document.getElementById('connection-status');
+        if (!statusElement) {
+            console.warn('connection-status element not found');
+            return;
+        }
+        
         const indicator = statusElement.querySelector('div');
         const text = statusElement.querySelector('span');
         
-        if (connected) {
-            indicator.className = 'w-3 h-3 bg-green-400 rounded-full animate-pulse';
-            text.textContent = 'Connected';
-        } else {
-            indicator.className = 'w-3 h-3 bg-red-400 rounded-full';
-            text.textContent = 'Disconnected';
+        if (indicator && text) {
+            if (connected) {
+                indicator.className = 'w-3 h-3 bg-green-400 rounded-full animate-pulse';
+                text.textContent = 'Connected';
+            } else {
+                indicator.className = 'w-3 h-3 bg-red-400 rounded-full';
+                text.textContent = 'Disconnected';
+            }
         }
     }
     
-    showEnvVarsSection() {
-        const githubUrl = document.getElementById('github-url').value.trim();
+    switchTab(tab) {
+        this.currentTab = tab;
         
-        if (!githubUrl) {
-            this.showError('Please enter a GitHub repository URL');
+        // Update tab buttons
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.getElementById(`tab-${tab}`).classList.add('active');
+        
+        // Show/hide content
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.add('hidden');
+        });
+        document.getElementById(`${tab}-repo-section`).classList.remove('hidden');
+        
+        // Reset selections
+        this.resetSelections();
+    }
+    
+    resetSelections() {
+        // Clear URL input
+        const githubUrl = document.getElementById('github-url');
+        if (githubUrl) {
+            githubUrl.value = '';
+        }
+        
+        // Reset selected repository
+        this.selectedRepo = null;
+        const selectedRepoInfo = document.getElementById('selected-repo-info');
+        if (selectedRepoInfo) {
+            selectedRepoInfo.classList.add('hidden');
+        }
+        
+        // Clear search
+        const searchInput = document.getElementById('repo-search');
+        if (searchInput) {
+            searchInput.value = '';
+        }
+    }
+    
+    async connectGitHub() {
+        const tokenInput = document.getElementById('github-token');
+        if (!tokenInput) {
+            this.showError('GitHub token input not found');
             return;
         }
         
-        if (!githubUrl.startsWith('https://github.com/')) {
-            this.showError('Please enter a valid GitHub URL (should start with https://github.com/)');
+        const token = tokenInput.value.trim();
+        
+        if (!token) {
+            this.showError('Please enter your GitHub Personal Access Token');
             return;
+        }
+        
+        if (!token.startsWith('ghp_') && !token.startsWith('github_pat_')) {
+            this.showError('Please enter a valid GitHub Personal Access Token');
+            return;
+        }
+        
+        const connectBtn = document.getElementById('connect-github-btn');
+        if (connectBtn) {
+            connectBtn.disabled = true;
+            connectBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Connecting...';
+        }
+        
+        try {
+            // Verify token and get user info
+            const userResponse = await fetch('https://api.github.com/user', {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            
+            if (!userResponse.ok) {
+                throw new Error('Invalid token or insufficient permissions');
+            }
+            
+            const userData = await userResponse.json();
+            this.githubToken = token;
+            this.githubUser = userData;
+            
+            // Show user info and repository selection
+            this.showGitHubUserInfo(userData);
+            await this.fetchRepositories();
+            
+        } catch (error) {
+            this.showError(`Failed to connect to GitHub: ${error.message}`);
+            if (connectBtn) {
+                connectBtn.disabled = false;
+                connectBtn.innerHTML = '<i class="fab fa-github mr-2"></i>Connect GitHub Account';
+            }
+        }
+    }
+    
+    showGitHubUserInfo(user) {
+        // Hide auth section, show repo selection
+        const authSection = document.getElementById('github-auth-section');
+        if (authSection) {
+            authSection.classList.add('hidden');
+        }
+        
+        const repoSection = document.getElementById('repo-selection-section');
+        if (repoSection) {
+            repoSection.classList.remove('hidden');
+        }
+        
+        // Update user info
+        const userAvatar = document.getElementById('user-avatar');
+        if (userAvatar) {
+            userAvatar.src = user.avatar_url;
+        }
+        
+        const userName = document.getElementById('user-name');
+        if (userName) {
+            userName.textContent = user.name || user.login;
+        }
+        
+        const userLogin = document.getElementById('user-login');
+        if (userLogin) {
+            userLogin.textContent = `@${user.login}`;
+        }
+    }
+    
+    async fetchRepositories() {
+        try {
+            const loadingElement = document.getElementById('repos-loading');
+            if (loadingElement) {
+                loadingElement.style.display = 'block';
+            }
+            
+            // Fetch user's repositories
+            const reposResponse = await fetch('https://api.github.com/user/repos?sort=updated&per_page=100', {
+                headers: {
+                    'Authorization': `token ${this.githubToken}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            
+            if (!reposResponse.ok) {
+                throw new Error('Failed to fetch repositories');
+            }
+            
+            const repos = await reposResponse.json();
+            this.repositories = repos;
+            
+            this.displayRepositories(repos);
+            
+        } catch (error) {
+            this.showError(`Failed to fetch repositories: ${error.message}`);
+        } finally {
+            const loadingElement = document.getElementById('repos-loading');
+            if (loadingElement) {
+                loadingElement.style.display = 'none';
+            }
+        }
+    }
+    
+    displayRepositories(repos) {
+        const container = document.getElementById('repositories-container');
+        if (!container) {
+            console.error('repositories-container not found');
+            return;
+        }
+        
+        // Clear loading state
+        container.innerHTML = '';
+        
+        if (repos.length === 0) {
+            container.innerHTML = `
+                <div class="p-8 text-center text-gray-500">
+                    <i class="fas fa-folder-open text-2xl mb-2"></i>
+                    <p>No repositories found</p>
+                </div>
+            `;
+            return;
+        }
+        
+        repos.forEach(repo => {
+            const repoItem = this.createRepositoryItem(repo);
+            container.appendChild(repoItem);
+        });
+    }
+    
+    createRepositoryItem(repo) {
+        const item = document.createElement('div');
+        item.className = 'repo-item p-4 border-b border-gray-200 hover:bg-gray-50';
+        item.dataset.repoId = repo.id;
+        
+        const languageClass = repo.language ? 
+            `lang-${repo.language.toLowerCase()}` : 'lang-default';
+        
+        const updatedDate = new Date(repo.updated_at).toLocaleDateString();
+        
+        item.innerHTML = `
+            <div class="flex items-center justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center space-x-2 mb-1">
+                        <span class="repo-language ${languageClass}"></span>
+                        <h4 class="font-semibold text-gray-800">${repo.name}</h4>
+                        ${repo.private ? '<i class="fas fa-lock text-gray-400 text-xs"></i>' : '<i class="fas fa-globe text-gray-400 text-xs"></i>'}
+                    </div>
+                    <p class="text-sm text-gray-600 mb-2">${repo.description || 'No description'}</p>
+                    <div class="flex items-center space-x-4 text-xs text-gray-500">
+                        ${repo.language ? `<span><i class="fas fa-code mr-1"></i>${repo.language}</span>` : ''}
+                        <span><i class="fas fa-star mr-1"></i>${repo.stargazers_count}</span>
+                        <span><i class="fas fa-code-branch mr-1"></i>${repo.forks_count}</span>
+                        <span><i class="fas fa-clock mr-1"></i>Updated ${updatedDate}</span>
+                    </div>
+                </div>
+                <div class="ml-4">
+                    <button class="select-repo-btn px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors">
+                        Select
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Add click handler
+        item.addEventListener('click', () => {
+            this.selectRepository(repo);
+        });
+        
+        return item;
+    }
+    
+    selectRepository(repo) {
+        this.selectedRepo = repo;
+        
+        // Update UI
+        document.querySelectorAll('.repo-item').forEach(item => {
+            item.classList.remove('selected');
+        });
+        
+        const selectedItem = document.querySelector(`[data-repo-id="${repo.id}"]`);
+        if (selectedItem) {
+            selectedItem.classList.add('selected');
+        }
+        
+        // Show selected repo info
+        const selectedRepoName = document.getElementById('selected-repo-name');
+        if (selectedRepoName) {
+            selectedRepoName.textContent = repo.full_name;
+        }
+        
+        const selectedRepoDescription = document.getElementById('selected-repo-description');
+        if (selectedRepoDescription) {
+            selectedRepoDescription.textContent = repo.description || 'No description available';
+        }
+        
+        const selectedRepoInfo = document.getElementById('selected-repo-info');
+        if (selectedRepoInfo) {
+            selectedRepoInfo.classList.remove('hidden');
+        }
+    }
+    
+    filterRepositories(searchTerm) {
+        const filteredRepos = this.repositories.filter(repo => 
+            repo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (repo.description && repo.description.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+        
+        this.displayRepositories(filteredRepos);
+    }
+    
+    disconnectGitHub() {
+        // Reset GitHub state
+        this.githubToken = null;
+        this.githubUser = null;
+        this.repositories = [];
+        this.selectedRepo = null;
+        
+        // Reset UI
+        document.getElementById('github-auth-section').classList.remove('hidden');
+        document.getElementById('repo-selection-section').classList.add('hidden');
+        document.getElementById('github-token').value = '';
+        document.getElementById('selected-repo-info').classList.add('hidden');
+        
+        // Reset connect button
+        const connectBtn = document.getElementById('connect-github-btn');
+        connectBtn.disabled = false;
+        connectBtn.innerHTML = '<i class="fab fa-github mr-2"></i>Connect GitHub Account';
+    }
+    
+    analyzePrivateRepo() {
+        if (!this.selectedRepo) {
+            this.showError('Please select a repository first');
+            return;
+        }
+        
+        // Set the repository URL for analysis
+        const repoUrl = this.selectedRepo.html_url;
+        
+        // Store the GitHub token for the analysis
+        this.currentRepoToken = this.githubToken;
+        this.currentRepoUrl = repoUrl;
+        
+        // Show environment variables section
+        this.showEnvVarsSection(true);
+    }
+    
+    showEnvVarsSection(isPrivate = false) {
+        let githubUrl;
+        
+        if (isPrivate) {
+            // Using private repository
+            githubUrl = this.currentRepoUrl;
+        } else {
+            // Using public repository
+            githubUrl = document.getElementById('github-url').value.trim();
+            
+            if (!githubUrl) {
+                this.showError('Please enter a GitHub repository URL');
+                return;
+            }
+            
+            if (!githubUrl.startsWith('https://github.com/')) {
+                this.showError('Please enter a valid GitHub URL (should start with https://github.com/)');
+                return;
+            }
         }
         
         // Show environment variables section
@@ -407,16 +814,26 @@ class DeploymentAnalyzer {
     }
     
     startAnalysis() {
-        const githubUrl = document.getElementById('github-url').value.trim();
+        let githubUrl;
+        let githubToken = null;
         
-        if (!githubUrl) {
-            this.showError('Please enter a GitHub repository URL');
-            return;
-        }
-        
-        if (!githubUrl.startsWith('https://github.com/')) {
-            this.showError('Please enter a valid GitHub URL (should start with https://github.com/)');
-            return;
+        if (this.currentTab === 'private' && this.selectedRepo) {
+            // Using private repository
+            githubUrl = this.currentRepoUrl;
+            githubToken = this.currentRepoToken;
+        } else {
+            // Using public repository
+            githubUrl = document.getElementById('github-url').value.trim();
+            
+            if (!githubUrl) {
+                this.showError('Please enter a GitHub repository URL');
+                return;
+            }
+            
+            if (!githubUrl.startsWith('https://github.com/')) {
+                this.showError('Please enter a valid GitHub URL (should start with https://github.com/)');
+                return;
+            }
         }
         
         // Reset UI state
@@ -429,16 +846,29 @@ class DeploymentAnalyzer {
         this.analysisStartTime = new Date();
         this.startTimer();
         
-        // Disable check button
+        // Disable check buttons
         const analyzeBtn = document.getElementById('analyze-btn');
+        const analyzePrivateBtn = document.getElementById('analyze-private-btn');
+        
         analyzeBtn.disabled = true;
         analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Checking...';
         
-        // Emit start analysis event with env vars
-        this.socket.emit('start_analysis', { 
+        if (analyzePrivateBtn) {
+            analyzePrivateBtn.disabled = true;
+            analyzePrivateBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Analyzing...';
+        }
+        
+        // Emit start analysis event with env vars and optional GitHub token
+        const analysisData = { 
             github_url: githubUrl,
             user_env_vars: this.userEnvVars
-        });
+        };
+        
+        if (githubToken) {
+            analysisData.github_token = githubToken;
+        }
+        
+        this.socket.emit('start_analysis', analysisData);
         
         // Scroll to analysis section
         document.getElementById('analysis-section').scrollIntoView({ behavior: 'smooth' });
@@ -551,20 +981,34 @@ class DeploymentAnalyzer {
         this.showFinalAssessment(data.data.final_assessment);
         this.stopTimer();
         
-        // Re-enable check button
+        // Re-enable check buttons
         const analyzeBtn = document.getElementById('analyze-btn');
+        const analyzePrivateBtn = document.getElementById('analyze-private-btn');
+        
         analyzeBtn.disabled = false;
         analyzeBtn.innerHTML = '<i class="fas fa-search mr-2"></i>Check';
+        
+        if (analyzePrivateBtn) {
+            analyzePrivateBtn.disabled = false;
+            analyzePrivateBtn.innerHTML = '<i class="fas fa-search mr-2"></i>Check';
+        }
     }
     
     handleAnalysisError(data) {
         this.showError(data.message);
         this.stopTimer();
         
-        // Re-enable check button
+        // Re-enable check buttons
         const analyzeBtn = document.getElementById('analyze-btn');
+        const analyzePrivateBtn = document.getElementById('analyze-private-btn');
+        
         analyzeBtn.disabled = false;
         analyzeBtn.innerHTML = '<i class="fas fa-search mr-2"></i>Check';
+        
+        if (analyzePrivateBtn) {
+            analyzePrivateBtn.disabled = false;
+            analyzePrivateBtn.innerHTML = '<i class="fas fa-search mr-2"></i>Check';
+        }
     }
     
     updatePhase(phaseNumber, status) {
@@ -827,10 +1271,17 @@ class DeploymentAnalyzer {
         // Clear URL input
         document.getElementById('github-url').value = '';
         
-        // Re-enable check button
+        // Re-enable check buttons
         const analyzeBtn = document.getElementById('analyze-btn');
+        const analyzePrivateBtn = document.getElementById('analyze-private-btn');
+        
         analyzeBtn.disabled = false;
         analyzeBtn.innerHTML = '<i class="fas fa-search mr-2"></i>Check';
+        
+        if (analyzePrivateBtn) {
+            analyzePrivateBtn.disabled = false;
+            analyzePrivateBtn.innerHTML = '<i class="fas fa-search mr-2"></i>Check';
+        }
         
         // Scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });

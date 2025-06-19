@@ -69,6 +69,57 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
+        
+        /* Tab Styles */
+        .tab-button.active {
+            background-color: white;
+            color: #2563eb;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tab-content {
+            transition: all 0.3s ease;
+        }
+        
+        /* Repository Item Styles */
+        .repo-item {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .repo-item:hover {
+            background-color: #f3f4f6;
+            transform: translateX(4px);
+        }
+        
+        .repo-item.selected {
+            background-color: #dbeafe;
+            border-color: #3b82f6;
+        }
+        
+        .repo-item .repo-language {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        
+        /* Language Colors */
+        .lang-javascript { background-color: #f1e05a; }
+        .lang-python { background-color: #3572a5; }
+        .lang-java { background-color: #b07219; }
+        .lang-typescript { background-color: #2b7489; }
+        .lang-html { background-color: #e34c26; }
+        .lang-css { background-color: #563d7c; }
+        .lang-php { background-color: #4f5d95; }
+        .lang-ruby { background-color: #701516; }
+        .lang-go { background-color: #00add8; }
+        .lang-rust { background-color: #dea584; }
+        .lang-cpp { background-color: #f34b7d; }
+        .lang-c { background-color: #555555; }
+        .lang-shell { background-color: #89e051; }
+        .lang-default { background-color: #6c757d; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -99,39 +150,177 @@
         <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
             <div class="text-center mb-8">
                 <h2 class="text-3xl font-bold text-gray-800 mb-4">Can Your Repository Be Deployed?</h2>
-                <p class="text-gray-600 text-lg">Enter a GitHub repository URL to get a simple YES/NO answer</p>
+                <p class="text-gray-600 text-lg">Choose how to access your repository</p>
             </div>
             
-            <div class="max-w-2xl mx-auto">
-                <div class="flex space-x-4">
-                    <div class="flex-1">
-                        <input 
-                            type="url" 
-                            id="github-url" 
-                            placeholder="https://github.com/username/repository"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
-                            required
-                        >
+            <!-- Repository Access Options -->
+            <div class="max-w-4xl mx-auto">
+                <!-- Tab Navigation -->
+                <div class="flex justify-center mb-8">
+                    <div class="bg-gray-100 p-1 rounded-lg">
+                        <button id="tab-public" class="tab-button px-6 py-3 rounded-md font-semibold transition-colors bg-white text-blue-600 shadow-sm">
+                            <i class="fas fa-globe mr-2"></i>
+                            Public Repository
+                        </button>
+                        <button id="tab-private" class="tab-button px-6 py-3 rounded-md font-semibold transition-colors text-gray-600 hover:text-blue-600">
+                            <i class="fas fa-lock mr-2"></i>
+                            Private Repository
+                        </button>
                     </div>
-                    <button 
-                        id="analyze-btn" 
-                        class="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold text-lg"
-                    >
-                        <i class="fas fa-search mr-2"></i>
-                        Check
-                    </button>
                 </div>
                 
-                <!-- Example URLs -->
-                <div class="mt-4 text-center">
-                    <p class="text-sm text-gray-500 mb-2">Try these examples:</p>
-                    <div class="flex flex-wrap justify-center gap-2">
-                        <button class="example-url text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full transition-colors" 
-                                data-url="https://github.com/tiangolo/fastapi">FastAPI</button>
-                        <button class="example-url text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full transition-colors" 
-                                data-url="https://github.com/pallets/flask">Flask</button>
-                        <button class="example-url text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full transition-colors" 
-                                data-url="https://github.com/octocat/Hello-World">Hello-World</button>
+                <!-- Public Repository Section -->
+                <div id="public-repo-section" class="tab-content">
+                    <div class="text-center mb-6">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">Enter Public Repository URL</h3>
+                        <p class="text-gray-600">Paste the GitHub URL of any public repository</p>
+                    </div>
+                    
+                    <div class="flex space-x-4">
+                        <div class="flex-1">
+                            <input 
+                                type="url" 
+                                id="github-url" 
+                                placeholder="https://github.com/username/repository"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                                required
+                            >
+                        </div>
+                        <button 
+                            id="analyze-btn" 
+                            class="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold text-lg"
+                        >
+                            <i class="fas fa-search mr-2"></i>
+                            Check
+                        </button>
+                    </div>
+                    
+                    <!-- Example URLs -->
+                    <div class="mt-4 text-center">
+                        <p class="text-sm text-gray-500 mb-2">Try these examples:</p>
+                        <div class="flex flex-wrap justify-center gap-2">
+                            <button class="example-url text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full transition-colors" 
+                                    data-url="https://github.com/tiangolo/fastapi">FastAPI</button>
+                            <button class="example-url text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full transition-colors" 
+                                    data-url="https://github.com/pallets/flask">Flask</button>
+                            <button class="example-url text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full transition-colors" 
+                                    data-url="https://github.com/octocat/Hello-World">Hello-World</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Private Repository Section -->
+                <div id="private-repo-section" class="tab-content hidden">
+                    <!-- GitHub Authentication -->
+                    <div id="github-auth-section">
+                        <div class="text-center mb-6">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-2">Connect Your GitHub Account</h3>
+                            <p class="text-gray-600">Authenticate to access your private repositories</p>
+                        </div>
+                        
+                        <div class="max-w-md mx-auto">
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-key mr-1"></i>
+                                    GitHub Personal Access Token
+                                </label>
+                                <input 
+                                    type="password" 
+                                    id="github-token" 
+                                    placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                >
+                                <div class="mt-2 text-xs text-gray-500">
+                                    <a href="https://github.com/settings/tokens/new?scopes=repo&description=Deployment%20Analyzer" 
+                                       target="_blank" 
+                                       class="text-blue-600 hover:text-blue-800 underline">
+                                        <i class="fas fa-external-link-alt mr-1"></i>
+                                        Create a new token with 'repo' scope
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <button 
+                                id="connect-github-btn" 
+                                class="w-full px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors font-semibold"
+                            >
+                                <i class="fab fa-github mr-2"></i>
+                                Connect GitHub Account
+                            </button>
+                        </div>
+                        
+                        <!-- Security Notice -->
+                        <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <div class="flex items-start space-x-3">
+                                <i class="fas fa-shield-alt text-blue-600 mt-1"></i>
+                                <div class="text-sm text-blue-800">
+                                    <p class="font-semibold mb-1">Your token is secure</p>
+                                    <p>We only use your token to fetch repository information. It's not stored permanently and is only kept in memory during analysis.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Repository Selection -->
+                    <div id="repo-selection-section" class="hidden">
+                        <div class="text-center mb-6">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-2">Select Repository</h3>
+                            <p class="text-gray-600">Choose a repository from your GitHub account</p>
+                        </div>
+                        
+                        <!-- User Info -->
+                        <div id="github-user-info" class="flex items-center justify-center mb-6 p-4 bg-gray-50 rounded-lg">
+                            <img id="user-avatar" src="" alt="User Avatar" class="w-10 h-10 rounded-full mr-3">
+                            <div>
+                                <p class="font-semibold text-gray-800" id="user-name"></p>
+                                <p class="text-sm text-gray-600" id="user-login"></p>
+                            </div>
+                            <button id="disconnect-github" class="ml-auto text-red-600 hover:text-red-800 text-sm">
+                                <i class="fas fa-sign-out-alt mr-1"></i>
+                                Disconnect
+                            </button>
+                        </div>
+                        
+                        <!-- Repository Search -->
+                        <div class="mb-4">
+                            <div class="relative">
+                                <input 
+                                    type="text" 
+                                    id="repo-search" 
+                                    placeholder="Search your repositories..."
+                                    class="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                >
+                                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Repository List -->
+                        <div id="repositories-container" class="space-y-2 max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+                            <div id="repos-loading" class="p-8 text-center text-gray-500">
+                                <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                                <p>Loading your repositories...</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Selected Repository -->
+                        <div id="selected-repo-info" class="hidden mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <i class="fas fa-check-circle text-green-600"></i>
+                                    <div>
+                                        <p class="font-semibold text-green-800" id="selected-repo-name"></p>
+                                        <p class="text-sm text-green-600" id="selected-repo-description"></p>
+                                    </div>
+                                </div>
+                                <button 
+                                    id="analyze-private-btn" 
+                                    class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
+                                >
+                                    <i class="fas fa-search mr-2"></i>
+                                    Analyze Repository
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
