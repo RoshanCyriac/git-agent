@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple command-line GitHub Repository Deployment Analyzer
+Interactive GitHub Repository Deployment Analyzer
 Usage: python analyze_repo.py <github_url>
 """
 
@@ -10,9 +10,16 @@ from dotenv import load_dotenv
 from agent.react_agent import GitHubRepoReActAgent
 
 
-def analyze_repo(github_url: str):
+def get_user_input(question):
+    """Get input from user with colored prompt."""
+    print(f"\n🤖 Agent Question: {question}")
+    response = input("👤 Your Answer: ").strip()
+    return response
+
+
+def analyze_repo_interactive(github_url: str):
     """
-    Analyze a repository and provide comprehensive deployment information.
+    Analyze a repository with interactive deployment feasibility check.
     
     Args:
         github_url: GitHub repository URL to analyze
@@ -32,62 +39,174 @@ def analyze_repo(github_url: str):
         agent = GitHubRepoReActAgent(api_key)
         
         print(f"🔍 Analyzing repository: {github_url}")
-        print("⏳ Analyzing deployment requirements...")
+        print("⏳ Performing comprehensive deployment analysis...")
         
-        # Create comprehensive deployment analysis prompt
-        deployment_prompt = f"""
-        Analyze the GitHub repository: {github_url}
+        # Phase 1: Initial Analysis
+        initial_prompt = f"""
+        Analyze the GitHub repository: {github_url} for deployment feasibility.
         
-        Provide a comprehensive deployment and setup guide covering:
+        Perform a comprehensive analysis focusing on:
 
-        ## ESSENTIAL FILES & DOCUMENTATION
-        - README.md analysis (project description, installation instructions, prerequisites)
-        - Package/dependency files (package.json, requirements.txt, etc.)
+        ## DEPLOYMENT FEASIBILITY ANALYSIS
+        1. **Code Quality Check**:
+           - Look for hardcoded localhost URLs, IP addresses, or ports
+           - Check for hardcoded file paths or system-specific paths
+           - Identify any development-only configurations
+           - Check for missing production configurations
 
-        ## CONFIGURATION & ENVIRONMENT  
-        - Environment configuration (.env.example, config files)
-        - Database and external service requirements
-        - Runtime requirements (language versions, system dependencies)
+        2. **Configuration Analysis**:
+           - Identify required environment variables
+           - Check for .env.example or configuration templates
+           - Look for database connection strings
+           - Find API endpoints and external service dependencies
 
-        ## DEPLOYMENT FILES
-        - Containerization (Dockerfile, docker-compose.yml)
-        - CI/CD workflows and deployment scripts
-        - Server configuration files
+        3. **Dependency Assessment**:
+           - Analyze package files for production readiness
+           - Check for development vs production dependencies
+           - Identify potential security vulnerabilities
+           - Look for version conflicts or outdated packages
 
-        ## ARCHITECTURE & BUILD
-        - Project structure and entry points
-        - Build process and commands
-        - Testing procedures
+        4. **Infrastructure Requirements**:
+           - Database requirements and setup
+           - External services needed (Redis, message queues, etc.)
+           - Port requirements and networking
+           - File system requirements
 
-        Provide step-by-step instructions for:
-        1. Prerequisites installation
-        2. Environment setup  
-        3. Configuration
-        4. Build process
-        5. Running locally
-        6. Production deployment
-        7. Troubleshooting
+        ## DEPLOYMENT BLOCKERS
+        Specifically identify any issues that would prevent deployment:
+        - Hardcoded localhost/127.0.0.1 references
+        - Missing environment variable configurations
+        - Incomplete database setup
+        - Missing production configurations
+        - Security issues (exposed secrets, etc.)
+        - Dependency conflicts
 
-        Clone the repository, examine all relevant files, and provide complete deployment information.
+        ## MISSING INFORMATION
+        List any information that would be needed from the user to proceed with deployment.
+
+        Clone the repository, examine all relevant files, and provide a detailed feasibility report.
         Clean up after analysis.
         """
         
-        # Run the analysis
-        result = agent.ask_question(deployment_prompt)
+        # Run initial analysis
+        print("📊 Phase 1: Initial deployment feasibility analysis...")
+        result = agent.ask_question(initial_prompt)
         
-        if result.get("success"):
-            print("\n" + "="*80)
-            print("🚀 DEPLOYMENT ANALYSIS RESULTS")
-            print("="*80)
-            print(f"📁 Repository: {github_url}")
-            print(f"🧠 Model: {result['model_used']}")
-            print("\n📋 Comprehensive Deployment Guide:")
-            print("-" * 80)
-            print(result['answer'])
-            return True
-        else:
+        if not result.get("success"):
             print(f"❌ Analysis failed: {result.get('error')}")
             return False
+        
+        analysis = result['answer']
+        
+        # Display initial results
+        print("\n" + "="*80)
+        print("📋 INITIAL DEPLOYMENT ANALYSIS")
+        print("="*80)
+        print(analysis)
+        
+        # Phase 2: Interactive Q&A for missing information
+        print("\n" + "="*80)
+        print("🤖 INTERACTIVE DEPLOYMENT CONSULTATION")
+        print("="*80)
+        
+        # Ask agent to identify questions for the user
+        questions_prompt = f"""
+        Based on the previous analysis of {github_url}, identify specific questions that need to be asked to the user to complete the deployment assessment.
+        
+        Focus on:
+        1. Missing environment variables and their values
+        2. Database configuration details
+        3. External service configurations
+        4. Domain/hosting preferences
+        5. Scaling requirements
+        6. Security configurations
+        
+        Provide a numbered list of specific questions that would help complete the deployment plan.
+        Keep questions concise and focused on deployment requirements.
+        
+        Previous analysis:
+        {analysis}
+        """
+        
+        questions_result = agent.ask_question(questions_prompt)
+        
+        if questions_result.get("success"):
+            questions_text = questions_result['answer']
+            print("🤖 The agent has identified some questions to complete the deployment analysis:")
+            print("-" * 80)
+            print(questions_text)
+            
+            # Interactive Q&A session
+            print("\n💬 Let's gather the missing information:")
+            user_responses = []
+            
+            # Simple interactive session
+            while True:
+                question = get_user_input("What information can you provide? (or type 'done' to finish)")
+                if question.lower() in ['done', 'finish', 'complete', 'exit']:
+                    break
+                if question:
+                    user_responses.append(question)
+            
+            # Phase 3: Final deployment assessment with user input
+            if user_responses:
+                print("\n📋 Processing your responses...")
+                
+                final_prompt = f"""
+                Based on the repository analysis of {github_url} and the user's responses, provide a final deployment assessment.
+                
+                Original Analysis:
+                {analysis}
+                
+                User Responses:
+                {chr(10).join([f"- {resp}" for resp in user_responses])}
+                
+                Now provide:
+                
+                ## DEPLOYMENT FEASIBILITY SUMMARY
+                - ✅ READY TO DEPLOY: List what's properly configured
+                - ⚠️ NEEDS ATTENTION: Issues that need to be fixed
+                - ❌ DEPLOYMENT BLOCKERS: Critical issues preventing deployment
+                
+                ## STEP-BY-STEP DEPLOYMENT PLAN
+                Provide detailed steps considering the user's responses:
+                1. Prerequisites and setup
+                2. Environment configuration
+                3. Database setup
+                4. Application configuration
+                5. Build and deployment process
+                6. Testing and verification
+                
+                ## DEPLOYMENT READINESS SCORE
+                Give a score from 1-10 and explain the reasoning.
+                
+                ## NEXT STEPS
+                Specific actions the user needs to take to make this deployable.
+                """
+                
+                final_result = agent.ask_question(final_prompt)
+                
+                if final_result.get("success"):
+                    print("\n" + "="*80)
+                    print("🚀 FINAL DEPLOYMENT ASSESSMENT")
+                    print("="*80)
+                    print(f"📁 Repository: {github_url}")
+                    print(f"🧠 Model: {final_result['model_used']}")
+                    print("\n📋 Complete Deployment Analysis:")
+                    print("-" * 80)
+                    print(final_result['answer'])
+                    return True
+        
+        # Fallback if no interactive session
+        print("\n" + "="*80)
+        print("🚀 DEPLOYMENT ANALYSIS RESULTS")
+        print("="*80)
+        print(f"📁 Repository: {github_url}")
+        print(f"🧠 Model: {result['model_used']}")
+        print("\n📋 Deployment Feasibility Report:")
+        print("-" * 80)
+        print(analysis)
+        return True
             
     except Exception as e:
         print(f"❌ Error: {str(e)}")
@@ -108,11 +227,16 @@ def main():
         print("❌ Please provide a valid GitHub URL (should start with https://github.com/)")
         sys.exit(1)
     
+    print("🚀 GitHub Repository Deployment Analyzer")
+    print("Interactive deployment feasibility analysis with chat support")
+    print("="*80)
+    
     # Analyze the repository
-    success = analyze_repo(github_url)
+    success = analyze_repo_interactive(github_url)
     
     if success:
         print("\n✅ Analysis completed successfully!")
+        print("💡 Use the deployment plan above to proceed with your deployment.")
     else:
         print("\n❌ Analysis failed!")
         sys.exit(1)

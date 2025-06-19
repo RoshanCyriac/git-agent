@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Repository Deployment Analyzer</title>
+    
+    <!-- CSS Framework and Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/custom.css') }}" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .glass { backdrop-filter: blur(10px); background-color: rgba(255, 255, 255, 0.1); }
+        .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .chat-bubble { animation: slideInUp 0.3s ease-out; }
+        .typing-indicator { animation: typing 1.4s infinite; }
+        
+        @keyframes slideInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes typing {
+            0%, 60%, 100% { transform: initial; }
+            30% { transform: translateY(-10px); }
+        }
+        
+        .status-running { border-left: 4px solid #3b82f6; background-color: #eff6ff; }
+        .status-complete { border-left: 4px solid #10b981; background-color: #f0fdf4; }
+        .status-error { border-left: 4px solid #ef4444; background-color: #fef2f2; }
+        .status-waiting { border-left: 4px solid #f59e0b; background-color: #fffbeb; }
+        
+        .phase-card {
+            transition: all 0.3s ease;
+            transform: translateX(-20px);
+            opacity: 0;
+        }
+        
+        .phase-card.active {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        
+        .question-card {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .question-card:hover {
+            border-color: #3b82f6;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .deployable-yes {
+            background: linear-gradient(135deg, #10b981, #059669);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .deployable-no {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-6 py-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-4xl font-bold mb-2">
+                        <i class="fas fa-rocket mr-3"></i>
+                        GitHub Deployment Analyzer
+                    </h1>
+                    <p class="text-xl opacity-90">Simple deployment check - Can your repository be hosted?</p>
+                </div>
+                <div class="text-right">
+                    <div id="connection-status" class="flex items-center space-x-2">
+                        <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                        <span class="text-sm">Connected</span>
+                    </div>
+                    <div id="api-status" class="text-sm opacity-75 mt-1">Checking API...</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-6 py-8">
+        <!-- Main Input Section -->
+        <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-800 mb-4">Can Your Repository Be Deployed?</h2>
+                <p class="text-gray-600 text-lg">Enter a GitHub repository URL to get a simple YES/NO answer</p>
+            </div>
+            
+            <div class="max-w-2xl mx-auto">
+                <div class="flex space-x-4">
+                    <div class="flex-1">
+                        <input 
+                            type="url" 
+                            id="github-url" 
+                            placeholder="https://github.com/username/repository"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                            required
+                        >
+                    </div>
+                    <button 
+                        id="analyze-btn" 
+                        class="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold text-lg"
+                    >
+                        <i class="fas fa-search mr-2"></i>
+                        Check
+                    </button>
+                </div>
+                
+                <!-- Example URLs -->
+                <div class="mt-4 text-center">
+                    <p class="text-sm text-gray-500 mb-2">Try these examples:</p>
+                    <div class="flex flex-wrap justify-center gap-2">
+                        <button class="example-url text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full transition-colors" 
+                                data-url="https://github.com/tiangolo/fastapi">FastAPI</button>
+                        <button class="example-url text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full transition-colors" 
+                                data-url="https://github.com/pallets/flask">Flask</button>
+                        <button class="example-url text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full transition-colors" 
+                                data-url="https://github.com/octocat/Hello-World">Hello-World</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Environment Variables Collection Section -->
+        <div id="env-vars-section" class="hidden">
+            <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+                <div class="text-center mb-8">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-cogs mr-3 text-green-500"></i>
+                        Environment Variables Setup
+                    </h3>
+                    <p class="text-gray-600">Provide your environment variables for accurate deployment analysis</p>
+                </div>
+                
+                <div class="max-w-4xl mx-auto">
+                    <!-- Full .env File Input -->
+                    <div class="mb-8 p-6 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border-2 border-dashed border-blue-200">
+                        <h4 class="font-semibold text-gray-800 text-xl mb-4 text-center">
+                            <i class="fas fa-file-code mr-2 text-blue-600"></i>
+                            Paste Your Complete .env File
+                        </h4>
+                        <p class="text-gray-600 text-center mb-4">
+                            Copy and paste your entire .env file content here - this is the easiest way!
+                        </p>
+                        <textarea 
+                            id="full-env-content" 
+                            placeholder="DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
+SECRET_KEY=your-secret-key-here
+PORT=5000
+API_KEY=your-api-key
+STRIPE_KEY=sk_test_...
+REDIS_URL=redis://localhost:6379
+
+# Paste your complete .env file content here"
+                            class="w-full h-48 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                            style="resize: vertical; min-height: 120px;"
+                        ></textarea>
+                        <div class="flex justify-between items-center mt-3">
+                            <p class="text-sm text-gray-500">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Lines starting with # are treated as comments
+                            </p>
+                            <button id="clear-env-content" class="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors">
+                                <i class="fas fa-trash mr-1"></i>
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- OR Divider -->
+                    <div class="flex items-center my-8">
+                        <div class="flex-1 border-t border-gray-300"></div>
+                        <div class="px-4 text-gray-500 font-medium">OR use the form below</div>
+                        <div class="flex-1 border-t border-gray-300"></div>
+                    </div>
+                    
+                    <!-- Common Environment Variables -->
+                    <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <div class="space-y-4">
+                            <h4 class="font-semibold text-gray-700 text-lg mb-3">
+                                <i class="fas fa-database mr-2 text-blue-500"></i>
+                                Database Configuration
+                            </h4>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Database URL</label>
+                                <input type="text" id="env-database-url" placeholder="postgresql://user:pass@host:port/dbname" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Database Host</label>
+                                <input type="text" id="env-db-host" placeholder="localhost or your-db-host.com" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Database Port</label>
+                                <input type="text" id="env-db-port" placeholder="5432, 3306, 27017, etc." 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <h4 class="font-semibold text-gray-700 text-lg mb-3">
+                                <i class="fas fa-key mr-2 text-yellow-500"></i>
+                                Application Settings
+                            </h4>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Secret Key</label>
+                                <input type="text" id="env-secret-key" placeholder="your-secret-key-here" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">API Keys</label>
+                                <input type="text" id="env-api-keys" placeholder="API_KEY=your-key, STRIPE_KEY=sk_..." 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">App Port</label>
+                                <input type="text" id="env-port" placeholder="3000, 5000, 8080, etc." 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Custom Environment Variables -->
+                    <div class="border-t pt-6">
+                        <h4 class="font-semibold text-gray-700 text-lg mb-4">
+                            <i class="fas fa-plus-circle mr-2 text-purple-500"></i>
+                            Custom Environment Variables
+                        </h4>
+                        <div id="custom-env-vars" class="space-y-3">
+                            <!-- Custom env vars will be added here -->
+                        </div>
+                        <button id="add-env-var" class="mt-3 px-4 py-2 text-sm bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors">
+                            <i class="fas fa-plus mr-1"></i>
+                            Add Custom Variable
+                        </button>
+                    </div>
+                    
+                    <!-- Environment File Preview -->
+                    <div class="mt-8 p-4 bg-gray-50 rounded-lg">
+                        <h4 class="font-semibold text-gray-700 mb-3">
+                            <i class="fas fa-file-code mr-2 text-gray-600"></i>
+                            .env File Preview
+                        </h4>
+                        <pre id="env-preview" class="text-sm text-gray-600 bg-white p-3 rounded border overflow-x-auto">
+# Your environment variables will appear here
+                        </pre>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex justify-center space-x-4 mt-8">
+                        <button id="skip-env-vars" class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                            <i class="fas fa-forward mr-2"></i>
+                            Skip & Analyze
+                        </button>
+                        <button id="submit-env-vars" class="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold">
+                            <i class="fas fa-check mr-2"></i>
+                            Use These Variables & Analyze
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Progress Section -->
+        <div id="analysis-section" class="hidden">
+            <!-- Progress Indicator -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-semibold text-gray-800">Analysis Progress</h3>
+                    <div id="analysis-timer" class="text-sm text-gray-500"></div>
+                </div>
+                
+                <div class="space-y-4">
+                    <div id="phase-1" class="phase-card p-4 rounded-lg bg-gray-50">
+                        <div class="flex items-center space-x-3">
+                            <div class="phase-icon w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
+                                <i class="fas fa-search text-sm"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-semibold">Step 1: Checking Deployability</h4>
+                                <p class="text-sm text-gray-600">Looking for deployment blockers and critical issues</p>
+                            </div>
+                            <div class="phase-status">
+                                <i class="fas fa-clock text-gray-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="phase-2" class="phase-card p-4 rounded-lg bg-gray-50">
+                        <div class="flex items-center space-x-3">
+                            <div class="phase-icon w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
+                                <i class="fas fa-question-circle text-sm"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-semibold">Step 2: Missing Information (if needed)</h4>
+                                <p class="text-sm text-gray-600">Asking about critical missing details</p>
+                            </div>
+                            <div class="phase-status">
+                                <i class="fas fa-clock text-gray-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="phase-3" class="phase-card p-4 rounded-lg bg-gray-50">
+                        <div class="flex items-center space-x-3">
+                            <div class="phase-icon w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
+                                <i class="fas fa-clipboard-check text-sm"></i>
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-semibold">Step 3: Final Answer</h4>
+                                <p class="text-sm text-gray-600">YES/NO answer with setup instructions</p>
+                            </div>
+                            <div class="phase-status">
+                                <i class="fas fa-clock text-gray-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-time Updates -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-broadcast-tower mr-2 text-blue-500"></i>
+                    Live Updates
+                </h3>
+                <div id="live-updates" class="space-y-3 max-h-64 overflow-y-auto">
+                    <!-- Updates will be added here dynamically -->
+                </div>
+            </div>
+
+            <!-- Initial Analysis Results -->
+            <div id="initial-results" class="hidden bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-chart-line mr-2 text-green-500"></i>
+                    Initial Check Results
+                </h3>
+                <div id="initial-content" class="prose max-w-none"></div>
+            </div>
+        </div>
+
+        <!-- Interactive Questions Section -->
+        <div id="questions-section" class="hidden">
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <div class="text-center mb-8">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-comments mr-3 text-blue-500"></i>
+                        Missing Information
+                    </h3>
+                    <p class="text-gray-600">Please provide these critical details to complete the analysis</p>
+                </div>
+                
+                <div id="questions-container" class="space-y-6">
+                    <!-- Questions will be added here dynamically -->
+                </div>
+                
+                <div class="text-center mt-8">
+                    <button id="submit-responses" class="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold text-lg">
+                        <i class="fas fa-paper-plane mr-2"></i>
+                        Submit Information
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Final Assessment Section -->
+        <div id="final-section" class="hidden">
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <div class="text-center mb-8">
+                    <h3 class="text-3xl font-bold text-gray-800 mb-6">
+                        <i class="fas fa-clipboard-check mr-3 text-blue-500"></i>
+                        Deployment Analysis Result
+                    </h3>
+                    <div id="deployment-answer" class="text-8xl font-bold mb-4">-</div>
+                    <p class="text-gray-600 text-lg">Can this repository be deployed?</p>
+                </div>
+                
+                <div id="final-content" class="prose max-w-none">
+                    <!-- Final assessment will be added here -->
+                </div>
+                
+                <div class="text-center mt-8">
+                    <button id="new-analysis" class="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                        <i class="fas fa-plus mr-2"></i>
+                        Check Another Repository
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-16">
+        <div class="container mx-auto px-6 text-center">
+            <p class="text-gray-400">
+                <i class="fas fa-heart text-red-500 mr-1"></i>
+                Simple deployment analysis powered by AI
+            </p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html> 
