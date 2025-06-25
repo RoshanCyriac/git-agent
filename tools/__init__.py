@@ -1,9 +1,10 @@
 """
-Tools package for the GitHub Repository Analyzer Agent
+GitHub Repository Analysis Tools
+
+This module provides LangChain-compatible tools for repository analysis.
 """
 
-from .repo_cloner import RepositoryCloner
-from .langchain_tools import (
+from .repository_tools import (
     CloneRepositoryTool,
     GetRepositoryStructureTool,
     FlexibleReadFileTool,
@@ -13,9 +14,8 @@ from .langchain_tools import (
 )
 
 __all__ = [
-    'RepositoryCloner',
     'CloneRepositoryTool',
-    'GetRepositoryStructureTool', 
+    'GetRepositoryStructureTool',
     'FlexibleReadFileTool',
     'ListClonedRepositoriesTool',
     'AnalyzeRepositoryTool',
